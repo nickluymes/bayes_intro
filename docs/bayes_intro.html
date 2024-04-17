@@ -467,7 +467,7 @@ Bayesian
 <td style="text-align: right;">-0.08</td>
 <td style="text-align: right;">0.03</td>
 <td style="text-align: right;">-0.09</td>
-<td style="text-align: right;">0.04</td>
+<td style="text-align: right;">0.03</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">year2020</td>
@@ -480,7 +480,7 @@ Bayesian
 <td style="text-align: left;">siteGB2</td>
 <td style="text-align: right;">0.81</td>
 <td style="text-align: right;">0.10</td>
-<td style="text-align: right;">0.82</td>
+<td style="text-align: right;">0.83</td>
 <td style="text-align: right;">0.10</td>
 </tr>
 <tr class="even">
@@ -495,13 +495,13 @@ Bayesian
 <td style="text-align: right;">-16.49</td>
 <td style="text-align: right;">359.62</td>
 <td style="text-align: right;">-2.80</td>
-<td style="text-align: right;">0.55</td>
+<td style="text-align: right;">0.53</td>
 </tr>
 <tr class="even">
 <td style="text-align: left;">siteGB9</td>
 <td style="text-align: right;">-0.27</td>
 <td style="text-align: right;">0.12</td>
-<td style="text-align: right;">-0.26</td>
+<td style="text-align: right;">-0.25</td>
 <td style="text-align: right;">0.12</td>
 </tr>
 </tbody>
@@ -524,14 +524,14 @@ Formula: count ~ scale(jday) + scale(canopy) + year + site + offset(log(samples/
 
 Regression Coefficients:
             Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
-Intercept      -1.03      0.09    -1.21    -0.85 1.00     1248     1470
-scalejday      -0.46      0.03    -0.53    -0.40 1.00     1626     1523
-scalecanopy    -0.09      0.03    -0.16    -0.02 1.01     1739     1575
-year2020       -0.11      0.07    -0.24     0.03 1.00     1694     1336
-siteGB2         0.82      0.10     0.63     1.01 1.00     1128     1306
-siteGB7         0.31      0.11     0.10     0.52 1.00     1172     1482
-siteGB8        -2.81      0.53    -3.99    -1.84 1.00     1281     1171
-siteGB9        -0.27      0.12    -0.50    -0.02 1.00     1241     1365
+Intercept      -1.03      0.09    -1.22    -0.85 1.00     1064     1380
+scalejday      -0.46      0.03    -0.53    -0.40 1.00     1509     1499
+scalecanopy    -0.09      0.03    -0.15    -0.01 1.00     1714     1183
+year2020       -0.11      0.07    -0.24     0.02 1.00     1718     1565
+siteGB2         0.83      0.10     0.64     1.02 1.00      892     1128
+siteGB7         0.32      0.11     0.11     0.54 1.00      939     1275
+siteGB8        -2.80      0.53    -3.94    -1.84 1.00     1511     1368
+siteGB9        -0.25      0.12    -0.49    -0.03 1.00      993     1364
 
 Draws were sampled using sampling(NUTS). For each parameter, Bulk_ESS
 and Tail_ESS are effective sample size measures, and Rhat is the potential
