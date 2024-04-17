@@ -3,5 +3,5 @@
 .RData
 .Ruserdata
 /.quarto/
-bayes_intro_cache
-bayes_intro_files
+/bayes_intro_cache
+/bayes_intro_files
