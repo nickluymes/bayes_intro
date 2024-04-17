@@ -1,11 +1,280 @@
 ---
-title: "bayes_intro"
+title: "Intro to Bayesian Inference in R"
+execute: 
+  cache: true
 ---
 
-## Quarto
+## Example: Flipping a Coin
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+Suppose we flip a coin a set number of times and count up the number of times a head appears. In this first example, we **don't** have any strong belief about the probability that a head will appear. In other words, any probability between 0 and 1 is equally likely to occur. Based on this prior knowledge (or lack thereof), we can visualize the prior distribution of potential probabilities drawing samples from a uniform distribution between 0 and 1.
 
 ```{r}
-1 + 1
+hist(runif(10000,0,1), breaks = 30, freq = FALSE, main = "Prior Distribution",
+       xlab = "Probability of Heads", ylab = "Density", xlim = c(0, 1))
+
+```
+
+Using this prior knowledge and the binomial likelihood function for our data we can generate samples from the posterior distribution.
+
+```{r}
+coin_model_unif <- function(n_flips){
+  # Simulate coin flips (0 for tails, 1 for heads)
+  set.seed(5)
+  coin_flips <- sample(c(0, 1), n_flips, replace = TRUE)
+  
+  # Likelihood function: Binomial likelihood
+  likelihood <- function(p) {
+    sum(dbinom(coin_flips, size = 1, prob = p, log = TRUE))
+  }
+  
+  # Prior distribution: Uniform prior
+  prior <- function(p) {
+    dunif(p, 0, 1, log = TRUE)
+  }
+  
+  # Posterior function: Proportional to the product of prior and likelihood
+  posterior <- function(p) {
+    prior(p) + likelihood(p)
+  }
+  
+  # Metropolis-Hastings MCMC algorithm
+  metropolis_hastings <- function() {
+    samples <- numeric(10000)
+    current_sample <- runif(1)  # Initialize at random value between 0 and 1
+    
+    for (i in 1:10000) {
+      # Sample proposed sample from a truncated normal distribution
+      proposed_sample <- truncnorm::rtruncnorm(1, a = 0, b = 1, 
+                                               mean = current_sample, sd = 0.1)
+      
+      # Calculate acceptance probability
+      acceptance_prob <- exp(posterior(proposed_sample) - 
+                               posterior(current_sample))
+      
+      # Accept or reject proposal
+      if (runif(1) < acceptance_prob) {
+        current_sample <- proposed_sample
+      }
+      
+      samples[i] <- current_sample
+    }
+    
+    return(samples)
+  }
+  
+  # Run Metropolis-Hastings MCMC
+  posterior_samples <- metropolis_hastings()
+  
+  # Plot posterior distribution
+  hist(posterior_samples, breaks = 30, freq = FALSE, 
+       main = "Posterior Distribution",
+       xlab = "Probability of Heads", ylab = "Density", xlim = c(0, 1))
+  observed_frequency <- sum(coin_flips) / n_flips
+  abline(v = observed_frequency, col = "red", lwd = 2)
+  legend("topright", legend = "Observed Frequency of Heads", col = "red", lty = 1,
+         lwd = 2)
+
+}
+
+coin_model_unif(10)
+coin_model_unif(100)
+```
+
+When we don't have any prior information, Bayesian inference resembles classical inference. The above estimates can be obtained from maximum likelihood.
+
+If we go into this problem with some prior knowledge about the probability of flipping heads, this knowledge will influence our posterior distribution. If we are pretty confident that the probability is 50%, but we want to leave some room for the possibility that the coin is biased, we might specify a prior distribution that looks like this (beta distribution centered at 0.5).
+
+```{r}
+hist(rbeta(10000,20,20), breaks = 30, freq = FALSE, main = "Prior Distribution",
+       xlab = "Probability of Heads", ylab = "Density", xlim = c(0, 1))
+```
+
+Now we can repeat the steps from earlier to generate samples from the posterior distribution.
+
+```{r}
+coin_model_beta <- function(n_flips){
+  # Simulate coin flips (0 for tails, 1 for heads)
+  set.seed(5)
+  coin_flips <- sample(c(0, 1), n_flips, replace = TRUE)
+  
+  # Likelihood function: Binomial likelihood
+  likelihood <- function(p) {
+    sum(dbinom(coin_flips, size = 1, prob = p, log = TRUE))
+  }
+  
+  # Prior distribution: Beta prior centered on 0.5
+  prior <- function(p) {
+    dbeta(p, 20, 20, log = TRUE)
+  }
+  
+  # Posterior function: Proportional to the product of prior and likelihood
+  posterior <- function(p) {
+    prior(p) + likelihood(p)
+  }
+  
+  # Metropolis-Hastings MCMC algorithm
+  metropolis_hastings <- function() {
+    samples <- numeric(10000)
+    current_sample <- runif(1)  # Initialize at random value between 0 and 1
+    
+    for (i in 1:10000) {
+      # Sample proposed sample from a truncated normal distribution
+      proposed_sample <- truncnorm::rtruncnorm(1, a = 0, b = 1, 
+                                               mean = current_sample, sd = 0.1)
+      
+      # Calculate acceptance probability
+      acceptance_prob <- exp(posterior(proposed_sample) - 
+                               posterior(current_sample))
+      
+      # Accept or reject proposal
+      if (runif(1) < acceptance_prob) {
+        current_sample <- proposed_sample
+      }
+      
+      samples[i] <- current_sample
+    }
+    
+    return(samples)
+  }
+  
+  # Run Metropolis-Hastings MCMC
+  posterior_samples <- metropolis_hastings()
+  
+  # Plot posterior distribution
+  hist(posterior_samples, breaks = 30, freq = FALSE, 
+       main = "Posterior Distribution",
+       xlab = "Probability of Heads", ylab = "Density", xlim = c(0, 1))
+  observed_frequency <- sum(coin_flips) / n_flips
+  abline(v = observed_frequency, col = "red", lwd = 2)
+  legend("topright", legend = "Observed Frequency of Heads", col = "red", lty = 1,
+         lwd = 2)
+
+}
+
+coin_model_beta(10)
+coin_model_beta(100)
+```
+
+We can see that the prior has a lot of influence on the posterior distribution when we only flip the coin 10 times, but is less influential when we have more data and the observed frequency is closer to 50%.
+
+## Modelling salamander larvae abundance
+
+```{r}
+#| output: false
+library(tidyverse)
+library(here)
+library(brms)
+```
+
+For this example, we are going to model the relative abundance of blue-spotted salamander larvae in wetlands. We are interested in the effects of canopy cover, day of year, year, and study site. We we use a Poisson distribution with a log-link to model counts of larvae in wetlands and use an offset term to account for differences in the number of samples per wetland and the size of the wetland relative to maximum inundation. We will start with a frequentist approach using the **glm()** function in R.
+
+```{r}
+
+vp_amphibs <- readRDS(here("data/vp_amphibs.rds")) %>%
+  mutate(year = factor(year)) %>%
+  rename(site = sites)
+
+vp_AL <- vp_amphibs %>%
+  filter(species == "BS") %>%
+  rowid_to_column()
+
+mod_freq <- glm(count~
+                    scale(jday)+
+                    scale(canopy)+
+                    year+
+                    site+
+                    offset(log(samples/proparea)),
+                  data=vp_AL,
+                  family="poisson")
+summary(mod_freq)
+```
+
+Most of these parameter estimates seem reasonable, but the effect size and standard error for the site GB8 variable are quite large. If we look at the total counts of larvae for each site we can see why.
+
+```{r}
+vp_AL %>%
+  group_by(site) %>%
+  summarise(total_count = sum(count)) %>%
+  ggplot(aes(x = site, y = total_count)) +
+  geom_bar(stat = "identity") +
+  theme_bw()
+```
+
+This is what is known as complete separation, when the outcome variable is seemingly perfectly predicted by the predictor. Site GB8 has only two wetlands and blue-spotted salamander larvae were not found in either. Complete separation isn't always an issue, but it can lead to errors in other parameter estimates and make model comparison difficult.
+
+Using a Bayesian approach, we can make use of weak priors to keep our make sure our parameter estimates are realistic.
+
+```{r}
+prior <- brms::set_prior("normal(0,1)", class = "b")
+
+# Plot normal distribution
+tibble(x = seq(-4, 4, length.out = 1000)) %>%
+  mutate(y = dnorm(x,0,1)) %>%
+  ggplot(aes(x = x, y = y)) +
+  geom_line() +  # Plot the normal distribution curve
+  labs(title = "Normal Distribution",
+       x = "x",
+       y = "Density") +
+  theme_bw()
+```
+
+**What does this prior mean?** The GB8 variable takes a value of 1 if the site is GB8 and 0 if it is not. Based on the prior distribution for GB8 above, we think the effect has a \~95% chance of being between -2 and 2. Since the expected count of salamander larvae is modelled with a log-link, this range of effects corresponds to a change in expected count between a factor of exp(-2) = 0.1 and a factor of exp(2) = 7.4, which seem reasonable for this system.
+
+If we have a lot of data for GB8, the prior won't have a huge impact on our posterior distribution. If we don't have a lot of data, then the prior will make sure we don't explore unreasonable values for the posterior.
+
+We will now use the brm function to specify our model. Note that the syntax is similar to glm(), but we now include some extra information.
+
+```{r}
+mod_bayes <- brms::brm(count~
+                    scale(jday)+
+                    scale(canopy)+
+                    year+
+                    site+
+                    offset(log(samples/proparea)),
+                  data=vp_AL,
+                  family="poisson",
+                  prior = prior, ### our normal(0,1) prior
+                  iter = 2000, ### number of samples to draw from the posterior
+                  warmup = 1000, ### number of samples to discard from the start
+                  chains = 2, ### number of independent samples to draw
+                  cores = 2) ### number of processing cores to use on computer
+```
+
+Now we can compare parameter estimates between the frequentist and Bayesian approaches
+
+```{r}
+# Extract parameter estimates
+glm_coefs <- broom::tidy(mod_freq) %>%
+  mutate(type = "freq") %>%
+  select(term, estimate, std.error, type) 
+brms_coefs <- as.data.frame(fixef(mod_bayes)) %>%
+  rename(estimate = Estimate,
+         std.error = Est.Error) %>%
+  mutate(term = glm_coefs$term,
+         type = "bayes") %>%
+  select(term, estimate, std.error, type)
+  
+
+rbind(glm_coefs, brms_coefs) %>%
+  mutate(estimate = round(estimate,2),
+         std.error = round(std.error,2)) %>%
+  pivot_wider(names_from = "type", values_from = c("estimate","std.error")) %>%
+    select(term, estimate_freq, std.error_freq, 
+           estimate_bayes, std.error_bayes) %>%
+  kableExtra::kbl(caption = "Comparison of Model Parameters",
+      col.names = c("Term","Estimate", "Std. Error","Estimate", "Std. Error")) %>%
+  kableExtra::add_header_above(c("","Frequentist"=2,"Bayesian"=2))
+
+```
+
+The parameter estimates and standard deviations are similar between the two approaches, but the parameter estimate and standard deviation for GB8 are smaller in magnitude.
+
+Lastly we'll explore some diagnostics:
+
+```{r}
+summary(mod_bayes)
+```
+
+```{r}
+plot(mod_bayes, variable = c("b_scalecanopy", "b_siteGB8"))
 ```

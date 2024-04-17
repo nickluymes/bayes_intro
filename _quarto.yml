@@ -1,5 +1,8 @@
 project:
   title: "bayes_intro"
+  output-dir: docs
+  type: website
 
 editor: visual
+
 
