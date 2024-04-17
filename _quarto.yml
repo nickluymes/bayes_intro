@@ -2,6 +2,9 @@ project:
   title: "bayes_intro"
   output-dir: docs
   type: website
+  
+execute: 
+  cache: TRUE
 
 editor: visual
 
